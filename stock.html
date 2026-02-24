@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>기관 매집 현황</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -147,7 +148,7 @@
     <div class="search-box">
       <div class="field">
         <label>날짜</label>
-        <input type="date" id="date" />
+        <input type="text" id="date" placeholder="날짜 선택" readonly style="cursor:pointer; width:140px;" />
       </div>
       <div class="field">
         <label>시장</label>
@@ -162,16 +163,23 @@
     <div id="result"></div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
   <script>
-    // 기본 날짜: 오늘 (주말이면 금요일)
     function getDefaultDate() {
       const d = new Date();
       const day = d.getDay();
       if (day === 0) d.setDate(d.getDate() - 2);
       else if (day === 6) d.setDate(d.getDate() - 1);
-      return d.toISOString().split('T')[0];
+      return d;
     }
-    document.getElementById('date').value = getDefaultDate();
+
+    const fp = flatpickr("#date", {
+      locale: "ko",
+      dateFormat: "Y-m-d",
+      defaultDate: getDefaultDate(),
+      disableMobile: true,
+    });
 
     async function search() {
       const date = document.getElementById('date').value.replace(/-/g, '');

@@ -104,9 +104,17 @@ func institutionalHandler(w http.ResponseWriter, r *http.Request) {
 	defer resp.Body.Close()
 
 	body, _ := io.ReadAll(resp.Body)
+	log.Printf("[KRX RAW] %s", string(body[:min(len(body), 500)]))
 
 	var krxResp KRXResponse
-	if err := json.Unmarshal(body, &krxResp); err != nil || len(krxResp.Output) == 0 {
+	if err := json.Unmarshal(body, &krxResp); err != nil {
+		log.Printf("[KRX ERR] %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(500)
+		w.Write([]byte(`{"error":"KRX 응답 파싱 실패","raw":"` + strings.ReplaceAll(string(body[:min(len(body), 200)]), `"`, `'`) + `"}`))
+		return
+	}
+	if len(krxResp.Output) == 0 {
 		http.Error(w, `{"error":"데이터 없음 (휴장일이거나 날짜 오류)"}`, 404)
 		return
 	}
@@ -151,6 +159,13 @@ func formatKRW(v float64) string {
 		return fmt.Sprintf("%s%.0f억", sign, abs/100_000_000)
 	}
 	return fmt.Sprintf("%s%.0f만", sign, abs/10_000)
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
