@@ -65,20 +65,57 @@ type KRXResponse struct {
 	Output []KRXItem `json:"output"`
 }
 
-func institutionalHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+func loadFromDB(date, market string) ([]StockItem, error) {
+	rows, err := db.Query(
+		"SELECT stock_code, stock_name, net_buy FROM institutional_data WHERE trade_date=? AND market=? ORDER BY net_buy DESC",
+		date, market,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-	date := r.URL.Query().Get("date")
-	market := r.URL.Query().Get("market")
-	if date == "" {
-		http.Error(w, `{"error":"date 파라미터 필요"}`, 400)
+	var items []StockItem
+	for rows.Next() {
+		var code, name string
+		var netBuy int64
+		if err := rows.Scan(&code, &name, &netBuy); err != nil {
+			continue
+		}
+		v := float64(netBuy)
+		items = append(items, StockItem{
+			Code:    code,
+			Name:    name,
+			NetBuy:  v,
+			NetBuyF: formatKRW(v),
+		})
+	}
+	return items, nil
+}
+
+func saveToDB(date, market string, items []StockItem) {
+	// 기존 데이터 삭제 후 재삽입
+	db.Exec("DELETE FROM institutional_data WHERE trade_date=? AND market=?", date, market)
+
+	stmt, err := db.Prepare(
+		"INSERT INTO institutional_data (trade_date, market, stock_code, stock_name, net_buy) VALUES (?, ?, ?, ?, ?)",
+	)
+	if err != nil {
+		log.Printf("[DB] Prepare 실패: %v", err)
 		return
 	}
-	if market == "" {
-		market = "STK" // 기본값 KOSPI
-	}
+	defer stmt.Close()
 
+	for _, item := range items {
+		_, err := stmt.Exec(date, market, item.Code, item.Name, int64(item.NetBuy))
+		if err != nil {
+			log.Printf("[DB] Insert 실패: %v", err)
+		}
+	}
+	log.Printf("[DB] %s %s 데이터 %d건 저장 완료", date, market, len(items))
+}
+
+func fetchFromKRX(date, market string) ([]StockItem, error) {
 	formData := url.Values{}
 	formData.Set("bld", "dbms/MDC/STAT/standard/MDCSTAT02303")
 	formData.Set("trdDd", date)
@@ -87,7 +124,6 @@ func institutionalHandler(w http.ResponseWriter, r *http.Request) {
 	formData.Set("money", "1")
 	formData.Set("csvxls_isNo", "false")
 
-	// 세션 쿠키 먼저 획득
 	jar, _ := cookiejar.New(nil)
 	client := &http.Client{Jar: jar}
 
@@ -97,8 +133,7 @@ func institutionalHandler(w http.ResponseWriter, r *http.Request) {
 
 	req, err := http.NewRequest("POST", "https://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd", strings.NewReader(formData.Encode()))
 	if err != nil {
-		http.Error(w, `{"error":"요청 생성 실패"}`, 500)
-		return
+		return nil, fmt.Errorf("요청 생성 실패: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
@@ -108,8 +143,7 @@ func institutionalHandler(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		http.Error(w, `{"error":"KRX 요청 실패"}`, 500)
-		return
+		return nil, fmt.Errorf("KRX 요청 실패: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -118,15 +152,10 @@ func institutionalHandler(w http.ResponseWriter, r *http.Request) {
 
 	var krxResp KRXResponse
 	if err := json.Unmarshal(body, &krxResp); err != nil {
-		log.Printf("[KRX ERR] %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(500)
-		w.Write([]byte(`{"error":"KRX 응답 파싱 실패","raw":"` + strings.ReplaceAll(string(body[:min(len(body), 200)]), `"`, `'`) + `"}`))
-		return
+		return nil, fmt.Errorf("KRX 파싱 실패: %v (raw: %s)", err, string(body[:min(len(body), 200)]))
 	}
 	if len(krxResp.Output) == 0 {
-		http.Error(w, `{"error":"데이터 없음 (휴장일이거나 날짜 오류)"}`, 404)
-		return
+		return nil, fmt.Errorf("데이터 없음 (휴장일이거나 날짜 오류)")
 	}
 
 	var items []StockItem
@@ -145,6 +174,55 @@ func institutionalHandler(w http.ResponseWriter, r *http.Request) {
 		return items[i].NetBuy > items[j].NetBuy
 	})
 
+	return items, nil
+}
+
+func institutionalHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	date := r.URL.Query().Get("date")
+	market := r.URL.Query().Get("market")
+	if date == "" {
+		http.Error(w, `{"error":"date 파라미터 필요"}`, 400)
+		return
+	}
+	if market == "" {
+		market = "STK"
+	}
+
+	// DB에서 먼저 조회
+	if db != nil {
+		dbItems, err := loadFromDB(date, market)
+		if err == nil && len(dbItems) > 0 {
+			log.Printf("[CACHE HIT] %s %s - %d건", date, market, len(dbItems))
+			result := buildResult(dbItems)
+			json.NewEncoder(w).Encode(result)
+			return
+		}
+	}
+
+	// DB에 없으면 KRX에서 가져오기
+	items, err := fetchFromKRX(date, market)
+	if err != nil {
+		if strings.Contains(err.Error(), "데이터 없음") {
+			http.Error(w, `{"error":"데이터 없음 (휴장일이거나 날짜 오류)"}`, 404)
+		} else {
+			http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), 500)
+		}
+		return
+	}
+
+	// DB에 저장
+	if db != nil {
+		saveToDB(date, market, items)
+	}
+
+	result := buildResult(items)
+	json.NewEncoder(w).Encode(result)
+}
+
+func buildResult(items []StockItem) InstitutionalResp {
 	result := InstitutionalResp{}
 	if len(items) >= 10 {
 		result.Top = items[:10]
@@ -152,8 +230,7 @@ func institutionalHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		result.Top = items
 	}
-
-	json.NewEncoder(w).Encode(result)
+	return result
 }
 
 func formatKRW(v float64) string {
