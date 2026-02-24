@@ -5,7 +5,7 @@ services:
     build: .
     container_name: myhome
     ports:
-      - "8080:8080"
+      - "7000:8080"
     restart: unless-stopped
     environment:
       - DB_HOST=124.54.134.127
