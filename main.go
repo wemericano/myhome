@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/http/cookiejar"
 	"net/url"
 	"os"
 	"sort"
@@ -86,6 +87,14 @@ func institutionalHandler(w http.ResponseWriter, r *http.Request) {
 	formData.Set("money", "1")
 	formData.Set("csvxls_isNo", "false")
 
+	// 세션 쿠키 먼저 획득
+	jar, _ := cookiejar.New(nil)
+	client := &http.Client{Jar: jar}
+
+	initReq, _ := http.NewRequest("GET", "https://data.krx.co.kr/contents/MDC/STAT/standard/MDCSTAT02303.cmd", nil)
+	initReq.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+	client.Do(initReq)
+
 	req, err := http.NewRequest("POST", "https://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd", strings.NewReader(formData.Encode()))
 	if err != nil {
 		http.Error(w, `{"error":"요청 생성 실패"}`, 500)
@@ -93,9 +102,10 @@ func institutionalHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-	req.Header.Set("Referer", "https://data.krx.co.kr/")
+	req.Header.Set("Referer", "https://data.krx.co.kr/contents/MDC/STAT/standard/MDCSTAT02303.cmd")
+	req.Header.Set("Accept", "application/json, text/javascript, */*; q=0.01")
+	req.Header.Set("X-Requested-With", "XMLHttpRequest")
 
-	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		http.Error(w, `{"error":"KRX 요청 실패"}`, 500)
