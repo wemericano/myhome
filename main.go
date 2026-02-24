@@ -115,6 +115,17 @@ func saveToDB(date, market string, items []StockItem) {
 	log.Printf("[DB] %s %s 데이터 %d건 저장 완료", date, market, len(items))
 }
 
+func setBrowserHeaders(req *http.Request, referer string) {
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36")
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
+	req.Header.Set("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7")
+	req.Header.Set("Accept-Encoding", "gzip, deflate, br")
+	req.Header.Set("Connection", "keep-alive")
+	if referer != "" {
+		req.Header.Set("Referer", referer)
+	}
+}
+
 func fetchFromKRX(date, market string) ([]StockItem, error) {
 	formData := url.Values{}
 	formData.Set("bld", "dbms/MDC/STAT/standard/MDCSTAT02303")
@@ -127,19 +138,28 @@ func fetchFromKRX(date, market string) ([]StockItem, error) {
 	jar, _ := cookiejar.New(nil)
 	client := &http.Client{Jar: jar}
 
-	initReq, _ := http.NewRequest("GET", "https://data.krx.co.kr/contents/MDC/STAT/standard/MDCSTAT02303.cmd", nil)
-	initReq.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-	client.Do(initReq)
+	// Step 1: 메인 페이지 방문
+	r1, _ := http.NewRequest("GET", "https://data.krx.co.kr", nil)
+	setBrowserHeaders(r1, "")
+	client.Do(r1)
 
+	// Step 2: 데이터 페이지 방문 (세션 쿠키 획득)
+	r2, _ := http.NewRequest("GET", "https://data.krx.co.kr/contents/MDC/STAT/standard/MDCSTAT02303.cmd", nil)
+	setBrowserHeaders(r2, "https://data.krx.co.kr")
+	client.Do(r2)
+
+	// Step 3: 실제 데이터 요청
 	req, err := http.NewRequest("POST", "https://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd", strings.NewReader(formData.Encode()))
 	if err != nil {
 		return nil, fmt.Errorf("요청 생성 실패: %v", err)
 	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-	req.Header.Set("Referer", "https://data.krx.co.kr/contents/MDC/STAT/standard/MDCSTAT02303.cmd")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36")
 	req.Header.Set("Accept", "application/json, text/javascript, */*; q=0.01")
+	req.Header.Set("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7")
+	req.Header.Set("Referer", "https://data.krx.co.kr/contents/MDC/STAT/standard/MDCSTAT02303.cmd")
 	req.Header.Set("X-Requested-With", "XMLHttpRequest")
+	req.Header.Set("Origin", "https://data.krx.co.kr")
 
 	resp, err := client.Do(req)
 	if err != nil {
