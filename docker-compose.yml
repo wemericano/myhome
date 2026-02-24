@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  myhome:
+    build: .
+    container_name: myhome
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
