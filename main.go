@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -280,6 +281,77 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`{"status":"ok"}`))
 }
 
+func aiChatHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, `{"error":"POST만 지원"}`, http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	var req struct {
+		Message string `json:"message"`
+		Type    string `json:"type"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error":"Invalid request"}`, http.StatusBadRequest)
+		return
+	}
+
+	// 타입별 프롬프트 조정
+	var prompt string
+	if req.Type == "business" {
+		prompt = fmt.Sprintf("당신은 경험 많은 사업 컨설턴트입니다. 다음 사업 아이디어에 대해 조언해주세요:\n%s", req.Message)
+	} else if req.Type == "stock" {
+		prompt = fmt.Sprintf("당신은 금융 분석가입니다. 다음 금융/주식 질문에 답변해주세요:\n%s", req.Message)
+	} else {
+		prompt = req.Message
+	}
+
+	response := callOllama(prompt)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"response": response,
+	})
+}
+
+func callOllama(prompt string) string {
+	client := &http.Client{Timeout: 60 * time.Second}
+
+	reqBody := map[string]interface{}{
+		"model":  "gemma3:1b",
+		"prompt": prompt,
+		"stream": false,
+	}
+
+	body, _ := json.Marshal(reqBody)
+	resp, err := client.Post(
+		"http://localhost:11434/api/generate",
+		"application/json",
+		strings.NewReader(string(body)),
+	)
+	if err != nil {
+		log.Printf("[Ollama] 요청 실패: %v", err)
+		return "AI 모델에 연결할 수 없습니다."
+	}
+	defer resp.Body.Close()
+
+	var result struct {
+		Response string `json:"response"`
+	}
+
+	respBody, _ := io.ReadAll(resp.Body)
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		log.Printf("[Ollama] 파싱 실패: %v", err)
+		return "응답을 파싱할 수 없습니다."
+	}
+
+	return result.Response
+}
+
 func main() {
 	initDB()
 	if db != nil {
@@ -288,6 +360,7 @@ func main() {
 
 	http.HandleFunc("/api/health", healthHandler)
 	http.HandleFunc("/api/institutional", institutionalHandler)
+	http.HandleFunc("/api/ai-chat", aiChatHandler)
 	http.Handle("/", http.FileServer(http.Dir(".")))
 
 	port := "8080"
