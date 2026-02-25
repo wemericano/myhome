@@ -321,12 +321,8 @@ func aiChatHandler(w http.ResponseWriter, r *http.Request) {
 func callOllama(prompt string) string {
 	client := &http.Client{Timeout: 60 * time.Second}
 
-	// Docker 또는 localhost 시도
-	ollamaHosts := []string{
-		"http://ollama:11434/api/generate",      // Docker 네트워크
-		"http://localhost:11434/api/generate",   // 로컬
-		"http://127.0.0.1:11434/api/generate",   // Fallback
-	}
+	// localhost만 사용 (bridge 네트워크에서 작동)
+	ollamaURL := "http://localhost:11434/api/generate"
 
 	reqBody := map[string]interface{}{
 		"model":  "gemma3:1b",
@@ -336,36 +332,29 @@ func callOllama(prompt string) string {
 
 	body, _ := json.Marshal(reqBody)
 
-	var lastErr error
-	for _, host := range ollamaHosts {
-		resp, err := client.Post(
-			host,
-			"application/json",
-			strings.NewReader(string(body)),
-		)
-		if err != nil {
-			lastErr = err
-			log.Printf("[Ollama] %s 연결 실패: %v", host, err)
-			continue
-		}
-		defer resp.Body.Close()
+	resp, err := client.Post(
+		ollamaURL,
+		"application/json",
+		strings.NewReader(string(body)),
+	)
+	if err != nil {
+		log.Printf("[Ollama] 연결 실패: %v (URL: %s)", err, ollamaURL)
+		return "AI 모델에 연결할 수 없습니다. Ollama 서버를 확인하세요."
+	}
+	defer resp.Body.Close()
 
-		var result struct {
-			Response string `json:"response"`
-		}
-
-		respBody, _ := io.ReadAll(resp.Body)
-		if err := json.Unmarshal(respBody, &result); err != nil {
-			log.Printf("[Ollama] 파싱 실패: %v", err)
-			continue
-		}
-
-		log.Printf("[Ollama] 성공: %s", host)
-		return result.Response
+	var result struct {
+		Response string `json:"response"`
 	}
 
-	log.Printf("[Ollama] 모든 호스트 실패: %v", lastErr)
-	return "AI 모델에 연결할 수 없습니다. Ollama 서버를 확인하세요."
+	respBody, _ := io.ReadAll(resp.Body)
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		log.Printf("[Ollama] 파싱 실패: %v", err)
+		return "응답을 파싱할 수 없습니다."
+	}
+
+	log.Printf("[Ollama] 성공: %s", ollamaURL)
+	return result.Response
 }
 
 func main() {
