@@ -7,7 +7,6 @@ services:
     ports:
       - "7000:8080"
     restart: unless-stopped
-    network_mode: host
     environment:
       - DB_HOST=124.54.134.127
       - DB_PORT=13306
