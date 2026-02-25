@@ -321,8 +321,8 @@ func aiChatHandler(w http.ResponseWriter, r *http.Request) {
 func callOllama(prompt string) string {
 	client := &http.Client{Timeout: 60 * time.Second}
 
-	// localhost로 접근 (Docker 컨테이너 내에서)
-	ollamaURL := "http://localhost:11434/api/generate"
+	// ollama 컨테이너 IP로 접근
+	ollamaURL := "http://172.17.0.3:11434/api/generate"
 
 	reqBody := map[string]interface{}{
 		"model":  "gemma3:1b",
