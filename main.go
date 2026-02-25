@@ -321,8 +321,8 @@ func aiChatHandler(w http.ResponseWriter, r *http.Request) {
 func callOllama(prompt string) string {
 	client := &http.Client{Timeout: 60 * time.Second}
 
-	// NAS IP로 직접 접근
-	ollamaURL := "http://124.54.134.127:11434/api/generate"
+	// localhost로 접근 (Docker 컨테이너 내에서)
+	ollamaURL := "http://localhost:11434/api/generate"
 
 	reqBody := map[string]interface{}{
 		"model":  "gemma3:1b",
