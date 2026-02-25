@@ -1,7 +1,7 @@
 FROM golang:1.24-alpine AS builder
 WORKDIR /app
 COPY go.mod go.sum ./
-COPY main.go handler.go ./
+COPY main.go ./
 RUN go build -o server .
 
 FROM alpine:latest
