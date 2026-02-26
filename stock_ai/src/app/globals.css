@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0f0f12;
+  --card: #16161b;
+  --border: #2a2a32;
+  --text: #e4e4e7;
+  --muted: #71717a;
+  --accent: #8b5cf6;
+  --accent-end: #3b82f6;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #a78bfa 0%, #3b82f6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.upload-zone {
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.08) 0%, rgba(59, 130, 246, 0.04) 100%);
+  border: 1px dashed rgba(139, 92, 246, 0.4);
+  transition: border-color 0.2s, background 0.2s;
+}
+.upload-zone:hover,
+.upload-zone.dragover {
+  border-color: rgba(139, 92, 246, 0.7);
+  background: rgba(139, 92, 246, 0.12);
+}
