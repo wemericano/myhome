@@ -7,9 +7,6 @@ node_modules
 .env.*.local
 stock_ai
 myhome.exe
-go.mod
-go.sum
-main.go
 Dockerfile
 docker-compose.yml
 .claude
