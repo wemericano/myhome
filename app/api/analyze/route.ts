@@ -26,7 +26,50 @@ const SYSTEM_PROMPT = `You are a technical analysis expert for stock/crypto char
   "tradingStrategy": "2-4 sentences in Korean, actionable advice"
 }
 
-Infer price scale from the chart (e.g. if axis shows 2000-26000, use those for chartBounds). Draw 1-2 resistance levels, 1-2 support levels. keyPriceLevels should list 4-6 important levels with short Korean descriptions. Return only valid JSON, no markdown.`;
+Infer price scale from the chart (e.g. if axis shows 2000-26000, use those for chartBounds). Draw 1-2 resistance levels, 1-2 support levels. keyPriceLevels should list 4-6 important levels with short Korean descriptions. You must respond with ONLY a single JSON object: no markdown code blocks, no backticks, no explanation before or after.`;
+
+/** 마크다운/설명 제거 후 JSON 객체만 추출 (중괄호 균형 맞춤) */
+function extractJson(raw: string): string {
+  let s = raw.trim();
+  // ```json ... ``` 또는 ``` ... ``` 제거
+  const codeBlock = s.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeBlock) s = codeBlock[1].trim();
+  // 첫 번째 { 위치
+  const start = s.indexOf('{');
+  if (start === -1) return '{}';
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  let quote = '';
+  for (let i = start; i < s.length; i++) {
+    const c = s[i];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (c === '\\' && inString) {
+      escape = true;
+      continue;
+    }
+    if (!inString) {
+      if (c === '"' || c === "'") {
+        inString = true;
+        quote = c;
+        continue;
+      }
+      if (c === '{') depth++;
+      else if (c === '}') {
+        depth--;
+        if (depth === 0) return s.slice(start, i + 1);
+      }
+      continue;
+    }
+    if (c === quote) inString = false;
+  }
+  // 균형 안 맞으면 기존 방식으로 fallback
+  const fallback = s.slice(start).match(/\{[\s\S]*\}/);
+  return fallback ? fallback[0] : s.slice(start);
+}
 
 export async function POST(request: NextRequest) {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -85,16 +128,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'AI가 응답을 생성하지 못했습니다.' }, { status: 502 });
     }
 
+    const jsonStr = extractJson(raw);
     let parsed: unknown;
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    const jsonStr = jsonMatch ? jsonMatch[0] : raw;
     try {
       parsed = JSON.parse(jsonStr);
     } catch {
-      return NextResponse.json(
-        { error: 'AI 응답을 파싱할 수 없습니다. 다시 시도해 주세요.' },
-        { status: 502 }
-      );
+      // trailing comma 등 흔한 오류 보정 후 재시도
+      const fixed = jsonStr
+        .replace(/,\s*([}\]])/g, '$1')
+        .replace(/([{[])\s*,/g, '$1');
+      try {
+        parsed = JSON.parse(fixed);
+      } catch {
+        console.error('Analyze parse failed. Raw (first 500):', raw.slice(0, 500));
+        return NextResponse.json(
+          { error: 'AI 응답을 파싱할 수 없습니다. 다시 시도해 주세요.' },
+          { status: 502 }
+        );
+      }
     }
 
     const r = parsed as Record<string, unknown>;
