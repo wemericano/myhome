@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+*.md
+.env
+.env.local
+.env.*.local
+stock_ai
+myhome.exe
+go.mod
+go.sum
+main.go
+Dockerfile
+docker-compose.yml
+.claude

@@ -1,11 +1,12 @@
 version: '3.8'
 
 services:
+  # Go API (기관 매매 등) - Next에서 /api/institutional, /api/health 로 프록시됨
   myhome:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: myhome
-    ports:
-      - "7000:8080"
     restart: unless-stopped
     environment:
       - DB_HOST=124.54.134.127
@@ -13,3 +14,19 @@ services:
       - DB_USER=root
       - DB_PASS=1q2w3e4r5t^Y
       - DB_NAME=myhome
+
+  # Next.js 통합 앱 (메인 + 포트폴리오 + Chart AI) - 여기로 접속
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.next
+    container_name: myhome-web
+    ports:
+      - "7000:3000"
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      - myhome
