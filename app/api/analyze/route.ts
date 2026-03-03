@@ -14,6 +14,11 @@ Analysis rules:
 - Set entryPrice, stopLoss, takeProfit from structure; riskRewardRatio and riskPercent/rewardPercent must be consistent.
 - Write summary, trendAnalysis, patternRecognition, technicalIndicators, tradingStrategy in professional, report-style Korean (2–4 sentences each). No fluff.
 
+CRITICAL (must follow):
+- entryPrice, stopLoss, takeProfit must NEVER be 0. Infer from the chart: use current price or last visible close for entry; support level for stopLoss; resistance or target for takeProfit. Use the same scale as the Y-axis (e.g. if chart shows 20000–28000, use numbers in that range).
+- summary, trendAnalysis, patternRecognition, technicalIndicators, tradingStrategy must NEVER be empty. Always write at least 1–2 sentences for each in Korean.
+- chartBounds.priceMin and priceMax must match the visible Y-axis range.
+
 JSON shape (return only this object, no markdown):
 {
   "recommendation": "BUY" | "SELL" | "HOLD",
@@ -115,7 +120,7 @@ export async function POST(request: NextRequest) {
   try {
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
-      max_tokens: 2000,
+      max_tokens: 4000,
       messages: [
         {
           role: 'system',
@@ -126,7 +131,7 @@ export async function POST(request: NextRequest) {
           content: [
             {
               type: 'text',
-              text: '위 규칙에 따라 차트를 전문가 수준으로 기술적 분석한 뒤, 지정된 JSON 형식만 반환하세요. 다른 텍스트 없이 JSON 객체만 출력하세요.',
+              text: '위 규칙에 따라 차트를 분석한 뒤 JSON만 반환하세요. 진입가·손절가·익절가는 반드시 차트 Y축 가격 범위 안의 구체적 숫자로 넣고(0 금지). 요약·추세분석·패턴인식·기술적지표·매매전략은 반드시 1문장 이상 한국어로 채우세요. 다른 텍스트 없이 JSON 객체만 출력하세요.',
             },
             {
               type: 'image_url',
