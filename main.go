@@ -332,18 +332,35 @@ func stockAIHandler(w http.ResponseWriter, r *http.Request) {
 </html>`))
 }
 
+func loggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("[요청] %s %s", r.Method, r.URL.Path)
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	initDB()
 	if db != nil {
 		defer db.Close()
 	}
 
-	http.HandleFunc("/api/health", healthHandler)
-	http.HandleFunc("/api/institutional", institutionalHandler)
-	http.HandleFunc("/stock_ai", stockAIHandler)
-	http.Handle("/", http.FileServer(http.Dir(".")))
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/health", healthHandler)
+	mux.HandleFunc("/api/institutional", institutionalHandler)
+	mux.HandleFunc("/stock_ai", stockAIHandler)
+	mux.Handle("/", http.FileServer(http.Dir(".")))
 
 	port := "8080"
 	fmt.Printf("서버 시작: http://localhost:%s\n", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	log.Printf("작업 디렉토리: %s", getCurrentDir())
+	log.Fatal(http.ListenAndServe(":"+port, loggingMiddleware(mux)))
+}
+
+func getCurrentDir() string {
+	dir, err := os.Getwd()
+	if err != nil {
+		return "Unknown"
+	}
+	return dir
 }
