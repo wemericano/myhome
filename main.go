@@ -334,7 +334,7 @@ func stockAIHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func initLogger() {
-	logDir := "logs"
+	logDir := "./logs"
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		fmt.Printf("로그 디렉토리 생성 실패: %v\n", err)
 		return
