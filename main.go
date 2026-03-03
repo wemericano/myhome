@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -332,6 +333,24 @@ func stockAIHandler(w http.ResponseWriter, r *http.Request) {
 </html>`))
 }
 
+func initLogger() {
+	logDir := "logs"
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		fmt.Printf("로그 디렉토리 생성 실패: %v\n", err)
+		return
+	}
+
+	logFileName := fmt.Sprintf("%s/server-%s.log", logDir, time.Now().Format("2006-01-02"))
+	logFile, err := os.OpenFile(logFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		fmt.Printf("로그 파일 생성 실패: %v\n", err)
+		return
+	}
+
+	log.SetOutput(logFile)
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+}
+
 func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[요청] %s %s", r.Method, r.URL.Path)
@@ -340,6 +359,13 @@ func loggingMiddleware(next http.Handler) http.Handler {
 }
 
 func main() {
+	initLogger()
+
+	log.Printf("========================================")
+	log.Printf("서버 시작 - %s", time.Now().Format("2006-01-02 15:04:05"))
+	log.Printf("작업 디렉토리: %s", getCurrentDir())
+	log.Printf("========================================")
+
 	initDB()
 	if db != nil {
 		defer db.Close()
@@ -353,7 +379,7 @@ func main() {
 
 	port := "8080"
 	fmt.Printf("서버 시작: http://localhost:%s\n", port)
-	log.Printf("작업 디렉토리: %s", getCurrentDir())
+	fmt.Printf("로그 파일: logs/server-%s.log\n", time.Now().Format("2006-01-02"))
 	log.Fatal(http.ListenAndServe(":"+port, loggingMiddleware(mux)))
 }
 
