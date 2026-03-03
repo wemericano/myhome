@@ -10,6 +10,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
+# standalone 서버가 찾는 위치에 public 포함
+RUN cp -r /app/public /app/.next/standalone/public 2>/dev/null || true
 
 FROM node:20-alpine AS runner
 WORKDIR /app
@@ -17,9 +19,10 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
-COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# public이 standalone에 없을 경우 대비
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000
