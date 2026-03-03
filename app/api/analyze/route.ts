@@ -2,8 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import type { AnalysisResult, Recommendation, TrendLine } from '@/types/analysis';
 
-const SYSTEM_PROMPT = `You are a technical analysis expert for stock/crypto charts. Given a chart image (candlestick or OHLC), analyze it and return a JSON object with the following structure. Use Korean for all text labels and analysis. All numeric values must be numbers (no quotes). Use the exact keys below.
+const SYSTEM_PROMPT = `You are a senior technical analyst (CTA/CFTe level) writing a concise professional report. Analyze the chart image (candlestick/OHLC) and return ONLY a JSON object. Use Korean. All numbers must be numeric (no quotes). Use exact keys.
 
+Analysis rules:
+- Identify trend (상승/하락/횡보), strength, and structure (고점·저점, 추세선, 채널).
+- Mark clear support/resistance from visible swing points; keyPriceLevels = 4–6 major levels with short labels (e.g. "이전 고점", "거래량 집중 구간").
+- Infer timeframe from axis (봉 수, 기간) and state in "timeframe" (e.g. "일봉", "4시간봉").
+- Comment on volume: breakout confirmation, divergence, climax in "volumeAnalysis".
+- Comment on momentum (RSI 과매수/과매도, MACD 크로스, 이격도 등) in "momentum".
+- Name chart patterns if visible: 헤드앤숄더, 이중천정/이중바닥, 삼각수렴, 플래그, 채널 등 in patternRecognition.
+- Set entryPrice, stopLoss, takeProfit from structure; riskRewardRatio and riskPercent/rewardPercent must be consistent.
+- Write summary, trendAnalysis, patternRecognition, technicalIndicators, tradingStrategy in professional, report-style Korean (2–4 sentences each). No fluff.
+
+JSON shape (return only this object, no markdown):
 {
   "recommendation": "BUY" | "SELL" | "HOLD",
   "confidence": number 1-100,
@@ -19,14 +30,17 @@ const SYSTEM_PROMPT = `You are a technical analysis expert for stock/crypto char
   "riskRewardRatio": "string e.g. 1:1.65",
   "riskPercent": number (negative),
   "rewardPercent": number (positive),
-  "summary": "2-3 sentences in Korean",
-  "trendAnalysis": "2-3 sentences in Korean",
-  "patternRecognition": "2-3 sentences in Korean",
-  "technicalIndicators": "2-3 sentences in Korean",
-  "tradingStrategy": "2-4 sentences in Korean, actionable advice"
+  "summary": "string",
+  "trendAnalysis": "string",
+  "patternRecognition": "string",
+  "technicalIndicators": "string",
+  "tradingStrategy": "string",
+  "volumeAnalysis": "string (거래량·수급 요약)",
+  "momentum": "string (모멘텀·강도 요약)",
+  "timeframe": "string (추정 타임프레임)"
 }
 
-Infer price scale from the chart (e.g. if axis shows 2000-26000, use those for chartBounds). Draw 1-2 resistance levels, 1-2 support levels. keyPriceLevels should list 4-6 important levels with short Korean descriptions. You must respond with ONLY a single JSON object: no markdown code blocks, no backticks, no explanation before or after.`;
+Infer price scale from axis for chartBounds. Respond with ONLY the JSON object: no markdown, no backticks, no text before or after.`;
 
 /** 마크다운/설명 제거 후 JSON 객체만 추출 (중괄호 균형 맞춤) */
 function extractJson(raw: string): string {
@@ -112,7 +126,7 @@ export async function POST(request: NextRequest) {
           content: [
             {
               type: 'text',
-              text: '이 차트 이미지를 분석하고 위 형식의 JSON만 반환하세요. 다른 설명 없이 JSON만 출력하세요.',
+              text: '위 규칙에 따라 차트를 전문가 수준으로 기술적 분석한 뒤, 지정된 JSON 형식만 반환하세요. 다른 텍스트 없이 JSON 객체만 출력하세요.',
             },
             {
               type: 'image_url',
@@ -169,6 +183,9 @@ export async function POST(request: NextRequest) {
       patternRecognition: String(r.patternRecognition || ''),
       technicalIndicators: String(r.technicalIndicators || ''),
       tradingStrategy: String(r.tradingStrategy || ''),
+      volumeAnalysis: r.volumeAnalysis != null ? String(r.volumeAnalysis) : undefined,
+      momentum: r.momentum != null ? String(r.momentum) : undefined,
+      timeframe: r.timeframe != null ? String(r.timeframe) : undefined,
     };
 
     return NextResponse.json(result);

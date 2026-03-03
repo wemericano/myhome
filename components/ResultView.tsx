@@ -39,11 +39,16 @@ export function ResultView({ chartImageUrl, result, onReset }: ResultViewProps) 
 
   return (
     <div className="space-y-6">
-      <div className={`${recColors[result.recommendation]} rounded-xl px-6 py-4 flex items-center justify-between`}>
+      <div className={`${recColors[result.recommendation]} rounded-xl px-6 py-4 flex items-center justify-between flex-wrap gap-2`}>
         <span className="font-bold text-lg uppercase tracking-wide">
           RECOMMENDATION {result.recommendation}
         </span>
-        <span className="font-semibold">CONFIDENCE {result.confidence}%</span>
+        <div className="flex items-center gap-4">
+          {result.timeframe && (
+            <span className="text-sm opacity-90">추정 {result.timeframe}</span>
+          )}
+          <span className="font-semibold">CONFIDENCE {result.confidence}%</span>
+        </div>
       </div>
 
       <section>
@@ -167,6 +172,22 @@ export function ResultView({ chartImageUrl, result, onReset }: ResultViewProps) 
               <p className="text-sm leading-relaxed">{result.technicalIndicators}</p>
             </div>
           </div>
+          {(result.volumeAnalysis || result.momentum) && (
+            <div className="grid md:grid-cols-2 gap-4 pt-2 border-t border-[var(--border)] mt-4">
+              {result.volumeAnalysis && (
+                <div>
+                  <p className="text-xs text-[var(--muted)] mb-1">거래량·수급</p>
+                  <p className="text-sm leading-relaxed">{result.volumeAnalysis}</p>
+                </div>
+              )}
+              {result.momentum && (
+                <div>
+                  <p className="text-xs text-[var(--muted)] mb-1">모멘텀</p>
+                  <p className="text-sm leading-relaxed">{result.momentum}</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </section>
 

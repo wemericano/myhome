@@ -34,4 +34,10 @@ export interface AnalysisResult {
   patternRecognition: string;
   technicalIndicators: string;
   tradingStrategy: string;
+  /** 거래량·수급 관점 (선택) */
+  volumeAnalysis?: string;
+  /** 모멘텀·강도 (선택) */
+  momentum?: string;
+  /** 추정 타임프레임 (선택) */
+  timeframe?: string;
 }
