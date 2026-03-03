@@ -40,4 +40,10 @@ export interface AnalysisResult {
   momentum?: string;
   /** 추정 타임프레임 (선택) */
   timeframe?: string;
+  /** 한 줄 핵심 의견 (리포트 헤드라인) */
+  headline?: string;
+  /** 리스크 요약 (1~2문장) */
+  keyRisks?: string;
+  /** 확신 근거 (이 의견을 내는 이유) */
+  convictionReasoning?: string;
 }

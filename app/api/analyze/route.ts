@@ -2,25 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import type { AnalysisResult, Recommendation, TrendLine } from '@/types/analysis';
 
-const SYSTEM_PROMPT = `You are a senior technical analyst (CTA/CFTe level) writing a concise professional report. Analyze the chart image (candlestick/OHLC) and return ONLY a JSON object. Use Korean. All numbers must be numeric (no quotes). Use exact keys.
+const SYSTEM_PROMPT = `You are a senior technical analyst at an institutional research desk (CTA/CFTe, 15+ years experience). You are writing a short Technical Analysis Report for internal/client use. Tone: concise, decisive, professional. Use precise terminology (지지·저항, 추세선 이탈, 거래량 확인, RSI/MACD, 패턴 완성 여부). Write in Korean. All numbers numeric (no quotes). Use exact keys only.
 
-Analysis rules:
-- Identify trend (상승/하락/횡보), strength, and structure (고점·저점, 추세선, 채널).
-- Mark clear support/resistance from visible swing points; keyPriceLevels = 4–6 major levels with short labels (e.g. "이전 고점", "거래량 집중 구간").
-- Infer timeframe from axis (봉 수, 기간) and state in "timeframe" (e.g. "일봉", "4시간봉").
-- Comment on volume: breakout confirmation, divergence, climax in "volumeAnalysis".
-- Comment on momentum (RSI 과매수/과매도, MACD 크로스, 이격도 등) in "momentum".
-- Name chart patterns if visible: 헤드앤숄더, 이중천정/이중바닥, 삼각수렴, 플래그, 채널 등 in patternRecognition.
-- Set entryPrice, stopLoss, takeProfit from structure; riskRewardRatio and riskPercent/rewardPercent must be consistent.
-- Write summary, trendAnalysis, patternRecognition, technicalIndicators, tradingStrategy in professional, report-style Korean (2–4 sentences each). No fluff.
-
-CRITICAL (must follow):
-- entryPrice, stopLoss, takeProfit must NEVER be 0. Infer from the chart: use current price or last visible close for entry; support level for stopLoss; resistance or target for takeProfit. Use the same scale as the Y-axis (e.g. if chart shows 20000–28000, use numbers in that range).
-- summary, trendAnalysis, patternRecognition, technicalIndicators, tradingStrategy must NEVER be empty. Always write at least 1–2 sentences for each in Korean.
-- chartBounds.priceMin and priceMax must match the visible Y-axis range.
+Report structure you must follow:
+1. headline: One sentence that states the conclusion and main action (e.g. "상승 추세선 유지 구간으로, 지지 부근 매수 후 저항 구간 목표." or "이중 천정 의심으로 관망, 이탈 시 숏 검토."). This is the report headline.
+2. convictionReasoning: 1–2 sentences on WHY this view (e.g. 어떤 구조·패턴·지표가 이 의견을 지지하는지). 확신 근거.
+3. keyRisks: 1–2 sentences on main risks (e.g. "지지 이탈 시 추가 하락 가능", "거래량 미확인 이탈은 실패 확률 상승"). 리스크 요약.
+4. Fill all numeric and text fields; never leave summary/trendAnalysis/patternRecognition/technicalIndicators/tradingStrategy empty. entryPrice, stopLoss, takeProfit must be in chart Y-axis scale (never 0). chartBounds = visible Y-axis range.
+5. keyPriceLevels: 4–6 levels with short labels (이전 고점, 거래량 집중가, 파악 가능한 지지·저항). resistances/supports from swing points. timeframe from axis (일봉/4시간봉 등). volumeAnalysis and momentum: 거래량·수급, RSI/MACD/이격도 등 한 줄 요약.
 
 JSON shape (return only this object, no markdown):
 {
+  "headline": "string (한 줄 핵심 의견)",
+  "convictionReasoning": "string (확신 근거)",
+  "keyRisks": "string (리스크 요약)",
   "recommendation": "BUY" | "SELL" | "HOLD",
   "confidence": number 1-100,
   "chartBounds": { "priceMin": number, "priceMax": number },
@@ -40,12 +35,12 @@ JSON shape (return only this object, no markdown):
   "patternRecognition": "string",
   "technicalIndicators": "string",
   "tradingStrategy": "string",
-  "volumeAnalysis": "string (거래량·수급 요약)",
-  "momentum": "string (모멘텀·강도 요약)",
-  "timeframe": "string (추정 타임프레임)"
+  "volumeAnalysis": "string",
+  "momentum": "string",
+  "timeframe": "string"
 }
 
-Infer price scale from axis for chartBounds. Respond with ONLY the JSON object: no markdown, no backticks, no text before or after.`;
+Respond with ONLY the JSON object: no markdown, no backticks, no text before or after.`;
 
 /** 마크다운/설명 제거 후 JSON 객체만 추출 (중괄호 균형 맞춤) */
 function extractJson(raw: string): string {
@@ -131,7 +126,7 @@ export async function POST(request: NextRequest) {
           content: [
             {
               type: 'text',
-              text: '위 규칙에 따라 차트를 분석한 뒤 JSON만 반환하세요. 진입가·손절가·익절가는 반드시 차트 Y축 가격 범위 안의 구체적 숫자로 넣고(0 금지). 요약·추세분석·패턴인식·기술적지표·매매전략은 반드시 1문장 이상 한국어로 채우세요. 다른 텍스트 없이 JSON 객체만 출력하세요.',
+              text: '위 리포트 구조대로 차트를 분석해 JSON만 반환하세요. headline(한 줄 핵심 의견), convictionReasoning(확신 근거), keyRisks(리스크 요약)를 반드시 포함하고, 진입가·손절가·익절가는 차트 Y축 범위의 구체적 숫자로 넣으세요(0 금지). 다른 텍스트 없이 JSON 객체만 출력하세요.',
             },
             {
               type: 'image_url',
@@ -191,6 +186,9 @@ export async function POST(request: NextRequest) {
       volumeAnalysis: r.volumeAnalysis != null ? String(r.volumeAnalysis) : undefined,
       momentum: r.momentum != null ? String(r.momentum) : undefined,
       timeframe: r.timeframe != null ? String(r.timeframe) : undefined,
+      headline: r.headline != null ? String(r.headline) : undefined,
+      keyRisks: r.keyRisks != null ? String(r.keyRisks) : undefined,
+      convictionReasoning: r.convictionReasoning != null ? String(r.convictionReasoning) : undefined,
     };
 
     return NextResponse.json(result);

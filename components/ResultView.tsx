@@ -39,17 +39,41 @@ export function ResultView({ chartImageUrl, result, onReset }: ResultViewProps) 
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between text-xs text-[var(--muted)] uppercase tracking-wider mb-1">
+        <span>Technical Analysis Report</span>
+        {result.timeframe && <span>추정 타임프레임: {result.timeframe}</span>}
+      </div>
+
       <div className={`${recColors[result.recommendation]} rounded-xl px-6 py-4 flex items-center justify-between flex-wrap gap-2`}>
         <span className="font-bold text-lg uppercase tracking-wide">
           RECOMMENDATION {result.recommendation}
         </span>
-        <div className="flex items-center gap-4">
-          {result.timeframe && (
-            <span className="text-sm opacity-90">추정 {result.timeframe}</span>
-          )}
-          <span className="font-semibold">CONFIDENCE {result.confidence}%</span>
-        </div>
+        <span className="font-semibold">CONFIDENCE {result.confidence}%</span>
       </div>
+
+      {result.headline && (
+        <section className="rounded-xl bg-[var(--card)] border border-[var(--border)] p-4">
+          <p className="text-xs text-[var(--muted)] mb-1.5 font-semibold uppercase tracking-wide">핵심 의견</p>
+          <p className="text-base font-medium leading-relaxed text-[var(--text)]">{result.headline}</p>
+        </section>
+      )}
+
+      {(result.convictionReasoning || result.keyRisks) && (
+        <section className="grid md:grid-cols-2 gap-4">
+          {result.convictionReasoning && (
+            <div className="rounded-xl bg-[var(--card)] border border-[var(--border)] p-4">
+              <p className="text-xs text-[var(--muted)] mb-1.5 font-semibold uppercase tracking-wide">확신 근거</p>
+              <p className="text-sm leading-relaxed">{result.convictionReasoning}</p>
+            </div>
+          )}
+          {result.keyRisks && (
+            <div className="rounded-xl bg-[var(--card)] border border-amber-500/30 p-4">
+              <p className="text-xs text-amber-400/90 mb-1.5 font-semibold uppercase tracking-wide">리스크 요약</p>
+              <p className="text-sm leading-relaxed">{result.keyRisks}</p>
+            </div>
+          )}
+        </section>
+      )}
 
       <section>
         <div className="flex items-center justify-between mb-3">
