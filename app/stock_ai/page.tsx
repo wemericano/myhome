@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { AnalysisResult } from '@/types/analysis';
@@ -45,6 +45,33 @@ export default function StockAiPage() {
       setError(null);
     }
   }, []);
+
+  const applyImageFile = useCallback((f: File) => {
+    if (!f.type.startsWith('image/')) return;
+    setFile(f);
+    setPreview(URL.createObjectURL(f));
+    setResult(null);
+    setError(null);
+  }, []);
+
+  const handlePaste = useCallback((e: ClipboardEvent) => {
+    if (!e.clipboardData?.items) return;
+    for (const item of e.clipboardData.items) {
+      if (item.kind === 'file' && item.type.startsWith('image/')) {
+        const f = item.getAsFile();
+        if (f) {
+          e.preventDefault();
+          applyImageFile(f);
+          return;
+        }
+      }
+    }
+  }, [applyImageFile]);
+
+  useEffect(() => {
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, [handlePaste]);
 
   const analyze = async () => {
     if (!file) return;
@@ -121,7 +148,7 @@ export default function StockAiPage() {
                 </div>
                 <div>
                   <p className="font-semibold text-lg">차트 이미지 업로드</p>
-                  <p className="text-sm text-[var(--muted)] mt-1">드래그 앤 드롭하거나 클릭하여 선택하세요</p>
+                  <p className="text-sm text-[var(--muted)] mt-1">드래그 앤 드롭, 클릭하여 선택, 또는 <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-xs">Ctrl+V</kbd> 붙여넣기</p>
                 </div>
                 {preview && (
                   <div className="mt-4 flex flex-col items-center gap-3">
