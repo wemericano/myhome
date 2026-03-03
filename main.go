@@ -280,6 +280,58 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`{"status":"ok"}`))
 }
 
+func stockAIHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>AI Stock Predictor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0f172a;
+      color: #e5e7eb;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      text-align: center;
+    }
+    .container {
+      padding: 40px;
+    }
+    h1 {
+      font-size: 36px;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    a {
+      color: #3b82f6;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🤖 AI Stock Predictor</h1>
+    <p>AI Stock Predictor 페이지는 준비 중입니다.</p>
+    <p><a href="/">← 돌아가기</a></p>
+  </div>
+</body>
+</html>`))
+}
+
 func main() {
 	initDB()
 	if db != nil {
@@ -288,6 +340,7 @@ func main() {
 
 	http.HandleFunc("/api/health", healthHandler)
 	http.HandleFunc("/api/institutional", institutionalHandler)
+	http.HandleFunc("/stock_ai", stockAIHandler)
 	http.Handle("/", http.FileServer(http.Dir(".")))
 
 	port := "8080"
