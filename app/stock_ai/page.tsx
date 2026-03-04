@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { AnalysisResult } from '@/types/analysis';
 import { ResultView } from '@/components/ResultView';
+
+const TIMEFRAME_OPTIONS = ['', '일봉', '4시간봉', '1시간봉', '30분봉', '15분봉', '기타'];
 
 export default function StockAiPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -13,6 +15,9 @@ export default function StockAiPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragover, setDragover] = useState(false);
+  const [symbol, setSymbol] = useState('');
+  const [timeframe, setTimeframe] = useState('');
+  const [useTwoStep, setUseTwoStep] = useState(false);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -46,6 +51,33 @@ export default function StockAiPage() {
     }
   }, []);
 
+  const applyImageFile = useCallback((f: File) => {
+    if (!f.type.startsWith('image/')) return;
+    setFile(f);
+    setPreview(URL.createObjectURL(f));
+    setResult(null);
+    setError(null);
+  }, []);
+
+  const handlePaste = useCallback((e: ClipboardEvent) => {
+    if (!e.clipboardData?.items) return;
+    for (const item of e.clipboardData.items) {
+      if (item.kind === 'file' && item.type.startsWith('image/')) {
+        const f = item.getAsFile();
+        if (f) {
+          e.preventDefault();
+          applyImageFile(f);
+          return;
+        }
+      }
+    }
+  }, [applyImageFile]);
+
+  useEffect(() => {
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, [handlePaste]);
+
   const analyze = async () => {
     if (!file) return;
     setLoading(true);
@@ -53,6 +85,9 @@ export default function StockAiPage() {
     try {
       const formData = new FormData();
       formData.append('image', file);
+      if (symbol.trim()) formData.append('symbol', symbol.trim());
+      if (timeframe.trim()) formData.append('timeframe', timeframe.trim());
+      if (useTwoStep) formData.append('twoStep', 'true');
       const res = await fetch('/api/analyze', {
         method: 'POST',
         body: formData,
@@ -121,11 +156,48 @@ export default function StockAiPage() {
                 </div>
                 <div>
                   <p className="font-semibold text-lg">차트 이미지 업로드</p>
-                  <p className="text-sm text-[var(--muted)] mt-1">드래그 앤 드롭하거나 클릭하여 선택하세요</p>
+                  <p className="text-sm text-[var(--muted)] mt-1">드래그 앤 드롭, 클릭하여 선택, 또는 <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-xs">Ctrl+V</kbd> 붙여넣기</p>
                 </div>
                 {preview && (
-                  <div className="mt-4 flex flex-col items-center gap-3">
-                    <div className="relative w-full max-w-md aspect-video rounded-lg overflow-hidden bg-black/40">
+                  <div className="mt-4 flex flex-col items-center gap-4 w-full max-w-md mx-auto">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                      <div>
+                        <label className="block text-xs text-[var(--muted)] mb-1">종목/심볼 (선택)</label>
+                        <input
+                          type="text"
+                          placeholder="예: BTCUSDT, 삼성전자"
+                          value={symbol}
+                          onChange={(e) => setSymbol(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-full px-3 py-2 rounded-lg bg-white/5 border border-[var(--border)] text-sm text-white placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--accent)]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-[var(--muted)] mb-1">타임프레임 (선택)</label>
+                        <select
+                          value={timeframe}
+                          onChange={(e) => setTimeframe(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-full px-3 py-2 rounded-lg bg-white/5 border border-[var(--border)] text-sm text-white focus:outline-none focus:border-[var(--accent)]"
+                        >
+                          {TIMEFRAME_OPTIONS.map((opt) => (
+                            <option key={opt || 'empty'} value={opt} className="bg-[var(--card)]">
+                              {opt || '선택 안 함'}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <label className="flex items-center gap-2 text-sm text-[var(--muted)] cursor-pointer w-full" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={useTwoStep}
+                        onChange={(e) => setUseTwoStep(e.target.checked)}
+                        className="rounded border-[var(--border)] bg-white/5 text-[var(--accent)] focus:ring-[var(--accent)]"
+                      />
+                      <span>정확도 우선 (2단계 분석) — 시간·비용 약 2배</span>
+                    </label>
+                    <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-black/40">
                       <Image src={preview} alt="차트 미리보기" fill className="object-contain" unoptimized />
                     </div>
                     <div className="flex gap-3">
