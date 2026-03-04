@@ -103,6 +103,7 @@
     .card::before {
       content: '';
       position: absolute;
+      z-index: 0;
       top: -50%;
       right: -50%;
       width: 200%;
@@ -219,6 +220,51 @@
       transform: translateY(-2px);
     }
 
+    /* 호버 시 나타나는 카드 팝업(모달) */
+    .card-popup {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 23, 42, 0.97);
+      border-radius: 16px;
+      border: 2px solid rgba(139, 92, 246, 0.6);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.2s ease, visibility 0.2s ease;
+      z-index: 10;
+      overflow: auto;
+    }
+    .card:hover .card-popup {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+    .card-popup h4 {
+      font-size: 20px;
+      color: #60a5fa;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+    .card-popup p {
+      font-size: 14px;
+      color: #cbd5e1;
+      line-height: 1.6;
+      margin-bottom: 12px;
+    }
+    .card-popup .popup-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: auto;
+    }
+
     @media (max-width: 768px) {
       .header {
         flex-direction: column;
@@ -278,6 +324,15 @@
           <span class="badge">TR</span>
           <span class="badge">DB</span>
         </div>
+        <div class="card-popup">
+          <h4>KB 스탁론</h4>
+          <p>KB 증권, 키움 캐피탈 연계 RMS 스탁론 개발</p>
+          <div class="popup-badges">
+            <span class="badge">C</span>
+            <span class="badge">TR</span>
+            <span class="badge">DB</span>
+          </div>
+        </div>
       </div>
       <div class="card">
         <h3>HANA 스탁론</h3>
@@ -288,6 +343,15 @@
           <span class="badge">TR</span>
           <span class="badge">DB</span>
         </div>
+        <div class="card-popup">
+          <h4>HANA 스탁론</h4>
+          <p>하나 증권, 키움 캐피탈 연계 RMS 스탁론 개발</p>
+          <div class="popup-badges">
+            <span class="badge">C</span>
+            <span class="badge">TR</span>
+            <span class="badge">DB</span>
+          </div>
+        </div>
       </div>
       <div class="card">
         <h3>MTS 리뉴얼</h3>
@@ -297,6 +361,15 @@
           <span class="badge">Javascript</span>
           <span class="badge">TR</span>
           <span class="badge">DB</span>
+        </div>
+        <div class="card-popup">
+          <h4>MTS 리뉴얼</h4>
+          <p>신영증권 MTS - 잔고 및 특화서비스 부분 개발</p>
+          <div class="popup-badges">
+            <span class="badge">Javascript</span>
+            <span class="badge">TR</span>
+            <span class="badge">DB</span>
+          </div>
         </div>
       </div>
     </div>
@@ -316,6 +389,17 @@
           <span class="badge">DB</span>
           <span class="badge">TR</span>
         </div>
+        <div class="card-popup">
+          <h4>한사랑</h4>
+          <p>한사랑 병원 관리 및 수납 시스템 플랫폼 구축</p>
+          <div class="popup-badges">
+            <span class="badge">서버구축</span>
+            <span class="badge">Javascript</span>
+            <span class="badge">C</span>
+            <span class="badge">DB</span>
+            <span class="badge">TR</span>
+          </div>
+        </div>
       </div>
       <div class="card">
         <h3>Lesse</h3>
@@ -328,6 +412,17 @@
           <span class="badge">DB</span>
           <span class="badge">TR</span>
         </div>
+        <div class="card-popup">
+          <h4>Lesse</h4>
+          <p>부동산 조각 투자 플랫폼 구축</p>
+          <div class="popup-badges">
+            <span class="badge">서버구축</span>
+            <span class="badge">Javascript</span>
+            <span class="badge">C</span>
+            <span class="badge">DB</span>
+            <span class="badge">TR</span>
+          </div>
+        </div>
       </div>
       <div class="card">
         <h3>GAMA</h3>
@@ -338,6 +433,16 @@
           <span class="badge">Node.js</span>
           <span class="badge">Javascript</span>
           <span class="badge">DB</span>
+        </div>
+        <div class="card-popup">
+          <h4>GAMA</h4>
+          <p>OTT 연계 모션 시뮬레이션 서버 및 클라이언트 개발</p>
+          <div class="popup-badges">
+            <span class="badge">서버구축</span>
+            <span class="badge">Node.js</span>
+            <span class="badge">Javascript</span>
+            <span class="badge">DB</span>
+          </div>
         </div>
       </div>
     </div>
@@ -354,6 +459,14 @@
           <span class="badge">C</span>
           <span class="badge">Javascript</span>
         </div>
+        <div class="card-popup">
+          <h4>Ultima Project</h4>
+          <p>해외선물, 국내 파생상품 자체 거래 플랫폼 HTS 리뉴얼</p>
+          <div class="popup-badges">
+            <span class="badge">C</span>
+            <span class="badge">Javascript</span>
+          </div>
+        </div>
       </div>
       <div class="card">
         <h3>Luna Project</h3>
@@ -362,6 +475,14 @@
         <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px;">
           <span class="badge">C</span>
           <span class="badge">Javascript</span>
+        </div>
+        <div class="card-popup">
+          <h4>Luna Project</h4>
+          <p>국내 주식 자체 거래 플랫폼 MTS, HTS 개발</p>
+          <div class="popup-badges">
+            <span class="badge">C</span>
+            <span class="badge">Javascript</span>
+          </div>
         </div>
       </div>
       <div class="card">
@@ -374,6 +495,16 @@
           <span class="badge">TR</span>
           <span class="badge">DB</span>
         </div>
+        <div class="card-popup">
+          <h4>Binary Option</h4>
+          <p>자체 거래 플랫폼 CRM 구축</p>
+          <div class="popup-badges">
+            <span class="badge">Golang</span>
+            <span class="badge">Javascript</span>
+            <span class="badge">TR</span>
+            <span class="badge">DB</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -385,6 +516,13 @@
         <h3>Multi-Asset Trading Platform</h3>
         <p>글로벌 및 국내 파생상품(선물, 옵션) 및 주식 거래 플랫폼의 운영과 고도화</p>
         <span class="badge">운영 시스템</span>
+        <div class="card-popup">
+          <h4>Multi-Asset Trading Platform</h4>
+          <p>글로벌 및 국내 파생상품(선물, 옵션) 및 주식 거래 플랫폼의 운영과 고도화</p>
+          <div class="popup-badges">
+            <span class="badge">운영 시스템</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
