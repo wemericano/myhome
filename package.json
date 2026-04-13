@@ -9,10 +9,11 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "mysql2": "^3.22.0",
     "next": "^16.1.6",
+    "openai": "^4.73.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "openai": "^4.73.0",
     "sharp": "^0.34.5"
   },
   "devDependencies": {
